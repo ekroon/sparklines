@@ -18,13 +18,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * add workflows ([bc62b2c](https://github.com/ekroon/sparklines/commit/bc62b2cc723f96cf04e0104c1819924095174816))
 * release ([91d8c1a](https://github.com/ekroon/sparklines/commit/91d8c1af9978e9b09d7c071acf31ea8c9911b8de))
 * switch to release-please ([76f500c](https://github.com/ekroon/sparklines/commit/76f500c3f9d07b83c2c296e48c3729388915af31))
-
-## [Unreleased]
-
-## [0.0.1](https://github.com/ekroon/sparklines/compare/sparklines-v0.0.0...sparklines-v0.0.1) - 2022-12-28
-
-### Added
-- add a StringSpark implementation
-
-### Other
-- add workflows
