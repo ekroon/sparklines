@@ -1,7 +1,7 @@
 [package]
 name = "sparklines"
 description = "Sparklines library"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Erwin Kroon <erwin@k3n.nl>"]
 repository = "https://github.com/ekroon/sparklines"
 edition = "2021"
