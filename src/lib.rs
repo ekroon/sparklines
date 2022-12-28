@@ -20,7 +20,7 @@ impl<'a> StringSpark<'a> {
     /// # use sparklines::TICKS;
     ///
     /// let spark = sparklines::StringSpark::new(&TICKS);
-    /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "▁▄█");
+    /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "▁▅█");
     ///
     /// let spark = sparklines::StringSpark::new(&['a','b','c']);
     /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "abc");
@@ -36,7 +36,7 @@ impl<'a> StringSpark<'a> {
     ///
     /// # Example
     /// ```
-    /// assert_eq!(sparklines::StringSpark::new(&sparklines::TICKS).spark(&[1.0,2.0,3.0]), "▁▄█");
+    /// assert_eq!(sparklines::StringSpark::new(&sparklines::TICKS).spark(&[1.0,2.0,3.0]), "▁▅█");
     /// ```
     pub fn spark(&self, data: &[f64]) -> String {
         let mut result = String::with_capacity(data.len() * 4);
@@ -64,9 +64,9 @@ impl<'a> StringSpark<'a> {
                     result.push(self.ticks[self.middle_idx]);
                 })
             } else {
-                let f = (max - min) / (self.ticks.len() - 1) as f64;
+                let idx_per_step = (self.ticks.len() - 1) as f64 / (max - min);
                 data.iter().for_each(|v| {
-                    let idx = ((v - min) / f) as usize;
+                    let idx = ((v - min) * idx_per_step).round() as usize;
                     result.push(self.ticks[idx]);
                 });
             }
@@ -86,7 +86,7 @@ impl Default for StringSpark<'_> {
 /// # Example
 /// ```
 /// # use sparklines::spark;
-/// assert_eq!(spark(&[1.0,2.0,3.0]), "▁▄█");
+/// assert_eq!(spark(&[1.0,2.0,3.0]), "▁▅█");
 /// ```
 pub fn spark(data: &[f64]) -> String {
     StringSpark::default().spark(data)
@@ -97,6 +97,7 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
+    #[test_case(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0] => "▁▁▂▂▃▃▄▄▅▅▆▆▇▇██")]
     #[test_case(&[1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0] => "▁▂▃▄▅▆▇█")]
     #[test_case(&[1.0, 1.0, 1.0, 1.0] => "▅▅▅▅")]
     #[test_case(&[1.0 ] => "▅")]
@@ -109,7 +110,7 @@ mod tests {
     #[test]
     fn test_default() {
         let spark = StringSpark::default();
-        assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▄█");
+        assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▅█");
     }
 
     #[test]
@@ -120,6 +121,6 @@ mod tests {
 
     #[test]
     fn test_spark_fn() {
-        assert_eq!(spark(&[1.0, 2.0, 3.0]), "▁▄█");
+        assert_eq!(spark(&[1.0, 2.0, 3.0]), "▁▅█");
     }
 }
