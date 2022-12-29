@@ -1,5 +1,10 @@
 //! The sparklines crate provides a simple way to generate sparklines.
 
+use crate::indexer::algorithmic::BuildAlgorithmicIndexer;
+use crate::indexer::{BuildIndexer, Indexer};
+
+mod indexer;
+
 /// Default ticks for create a string sparkline.
 /// ```
 /// assert_eq!(sparklines::TICKS, ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']);
@@ -7,9 +12,15 @@
 pub const TICKS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
 /// `StringSparkline` is a struct that can be used to create a string sparkline.
-pub struct StringSpark<'a> {
+pub struct StringSpark<'a, I = BuildAlgorithmicIndexer>
+where
+    I: BuildIndexer<f64, usize>,
+{
+    min: Option<f64>,
+    max: Option<f64>,
     ticks: &'a [char],
     middle_idx: usize,
+    build_indexer: I,
 }
 
 impl<'a> StringSpark<'a> {
@@ -27,8 +38,33 @@ impl<'a> StringSpark<'a> {
     /// ```
     pub fn new(ticks: &'a [char]) -> Self {
         Self {
-            ticks: &ticks,
+            min: None,
+            max: None,
+            ticks,
             middle_idx: ticks.len() / 2,
+            build_indexer: Default::default(),
+        }
+    }
+
+    /// Create a new `SparkLines` instance.
+    ///
+    /// # Examples
+    /// ```
+    /// # use sparklines::TICKS;
+    ///
+    /// let spark = sparklines::StringSpark::new_with_min_max(&TICKS, 2.0, 3.0);
+    /// assert_eq!(spark.spark(&[1.0,2.0,3.0,4.0]), "▁▁██");
+    ///
+    /// let spark = sparklines::StringSpark::new_with_min_max(&TICKS, 1.0, 3.0);
+    /// assert_eq!(spark.spark(&[0.0,2.0,300.0]), "▁▅█");
+    /// ```
+    pub fn new_with_min_max(ticks: &'a [char], min: f64, max: f64) -> Self {
+        Self {
+            min: Some(min),
+            max: Some(max),
+            ticks,
+            middle_idx: ticks.len() / 2,
+            build_indexer: Default::default(),
         }
     }
 
@@ -40,22 +76,24 @@ impl<'a> StringSpark<'a> {
     /// ```
     pub fn spark(&self, data: &[f64]) -> String {
         let mut result = String::with_capacity(data.len() * 4);
-        let mut min = None;
-        let mut max = None;
-        for v in data {
-            if let Some(m) = min {
-                if v < m {
+        let mut min: Option<&f64> = self.min.as_ref();
+        let mut max: Option<&f64> = self.max.as_ref();
+        if min.is_none() || max.is_none() {
+            for v in data {
+                if let Some(m) = min {
+                    if v < m {
+                        min = Some(v);
+                    }
+                } else {
                     min = Some(v);
                 }
-            } else {
-                min = Some(v);
-            }
-            if let Some(m) = max {
-                if v > m {
+                if let Some(m) = max {
+                    if v > m {
+                        max = Some(v);
+                    }
+                } else {
                     max = Some(v);
                 }
-            } else {
-                max = Some(v);
             }
         }
         if let (Some(min), Some(max)) = (min, max) {
@@ -64,10 +102,9 @@ impl<'a> StringSpark<'a> {
                     result.push(self.ticks[self.middle_idx]);
                 })
             } else {
-                let idx_per_step = (self.ticks.len() - 1) as f64 / (max - min);
+                let indexer = self.build_indexer.build_indexer(*min, *max, self.ticks);
                 data.iter().for_each(|v| {
-                    let idx = ((v - min) * idx_per_step).round() as usize;
-                    result.push(self.ticks[idx]);
+                    result.push(self.ticks[indexer.index(*v)]);
                 });
             }
         }
