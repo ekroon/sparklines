@@ -80,6 +80,9 @@ impl<'a> StringSpark<'a> {
         let mut max: Option<&f64> = self.max.as_ref();
         if min.is_none() || max.is_none() {
             for v in data {
+                if v.is_nan() {
+                    continue;
+                }
                 if let Some(m) = min {
                     if v < m {
                         min = Some(v);
@@ -104,7 +107,9 @@ impl<'a> StringSpark<'a> {
             } else {
                 let indexer = self.build_indexer.build_indexer(*min, *max, self.ticks);
                 data.iter().for_each(|v| {
-                    result.push(self.ticks[indexer.index(*v)]);
+                    if !v.is_nan() {
+                        result.push(self.ticks[indexer.index(*v)]);
+                    }
                 });
             }
         }
@@ -154,6 +159,22 @@ mod tests {
     fn test_non_default() {
         let spark = StringSpark::new(&['a', 'b', 'c']);
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "abc");
+    }
+
+    #[test]
+    fn test_nan() {
+        let spark = StringSpark::default();
+        assert_eq!(spark.spark(&[f64::NAN, 1.0, 2.0, f64::NAN, 3.0]), "▁▅█");
+    }
+
+    #[ignore]
+    #[test]
+    fn test_infinite() {
+        let spark = StringSpark::default();
+        assert_eq!(
+            spark.spark(&[f64::NEG_INFINITY, 0.0, f64::INFINITY,]),
+            "▁▅█"
+        );
     }
 
     #[test]
