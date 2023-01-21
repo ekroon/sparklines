@@ -12,10 +12,7 @@ mod indexer;
 pub const TICKS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
 
 /// `StringSparkline` is a struct that can be used to create a string sparkline.
-pub struct StringSpark<'a, I = BuildAlgorithmicIndexer>
-where
-    I: BuildIndexer<f64, usize>,
-{
+pub struct StringSpark<'a, I = BuildAlgorithmicIndexer> {
     min: Option<f64>,
     max: Option<f64>,
     ticks: &'a [char],
@@ -23,7 +20,7 @@ where
     build_indexer: I,
 }
 
-impl<'a> StringSpark<'a> {
+impl<'a> StringSpark<'a, BuildAlgorithmicIndexer> {
     /// Create a new `SparkLines` instance.
     ///
     /// # Examples
@@ -36,14 +33,8 @@ impl<'a> StringSpark<'a> {
     /// let spark = sparklines::StringSpark::new(&['a','b','c']);
     /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "abc");
     /// ```
-    pub fn new(ticks: &'a [char]) -> Self {
-        Self {
-            min: None,
-            max: None,
-            ticks,
-            middle_idx: ticks.len() / 2,
-            build_indexer: Default::default(),
-        }
+    pub fn new(ticks: &'a [char]) -> StringSpark {
+        Self::new_with_indexer(ticks, Default::default())
     }
 
     /// Create a new `SparkLines` instance.
@@ -58,16 +49,46 @@ impl<'a> StringSpark<'a> {
     /// let spark = sparklines::StringSpark::new_with_min_max(&TICKS, 1.0, 3.0);
     /// assert_eq!(spark.spark(&[0.0,2.0,300.0]), "▁▅█");
     /// ```
-    pub fn new_with_min_max(ticks: &'a [char], min: f64, max: f64) -> Self {
-        Self {
-            min: Some(min),
-            max: Some(max),
+    pub fn new_with_min_max(
+        ticks: &'a [char],
+        min: f64,
+        max: f64,
+    ) -> StringSpark<BuildAlgorithmicIndexer> {
+        Self::new_with_min_max_and_indexer(ticks, min, max, Default::default())
+    }
+}
+
+impl<'a, I> StringSpark<'a, I> {
+    pub const fn new_with_indexer(ticks: &[char], indexer: I) -> StringSpark<I> {
+        StringSpark {
+            min: None,
+            max: None,
             ticks,
             middle_idx: ticks.len() / 2,
-            build_indexer: Default::default(),
+            build_indexer: indexer,
         }
     }
 
+    pub fn new_with_min_max_and_indexer(
+        ticks: &[char],
+        min: f64,
+        max: f64,
+        indexer: I,
+    ) -> StringSpark<I> {
+        StringSpark {
+            min: Some(min),
+            max: Some(max),
+            ticks: ticks.into(),
+            middle_idx: ticks.len() / 2,
+            build_indexer: indexer,
+        }
+    }
+}
+
+impl<'a, I> StringSpark<'a, I>
+where
+    I: BuildIndexer<f64, usize>,
+{
     /// Convert a slice of `f64` values into a String representing a sparkline.
     ///
     /// # Example
@@ -105,7 +126,7 @@ impl<'a> StringSpark<'a> {
                     result.push(self.ticks[self.middle_idx]);
                 })
             } else {
-                let indexer = self.build_indexer.build_indexer(*min, *max, self.ticks);
+                let indexer = self.build_indexer.build_indexer(*min, *max, &self.ticks);
                 data.iter().for_each(|v| {
                     if !v.is_nan() {
                         result.push(self.ticks[indexer.index(*v)]);
@@ -117,9 +138,9 @@ impl<'a> StringSpark<'a> {
     }
 }
 
-impl Default for StringSpark<'_> {
-    fn default() -> Self {
-        StringSpark::new(&TICKS)
+impl<'a> Default for StringSpark<'a> {
+    fn default() -> StringSpark<'a> {
+        StringSpark::new_with_indexer(&TICKS, Default::default())
     }
 }
 
@@ -131,7 +152,7 @@ impl Default for StringSpark<'_> {
 /// assert_eq!(spark(&[1.0,2.0,3.0]), "▁▅█");
 /// ```
 pub fn spark(data: &[f64]) -> String {
-    StringSpark::default().spark(data)
+    StringSpark::<BuildAlgorithmicIndexer>::default().spark(data)
 }
 
 #[cfg(test)]
@@ -151,7 +172,7 @@ mod tests {
 
     #[test]
     fn test_default() {
-        let spark = StringSpark::default();
+        let spark: StringSpark<BuildAlgorithmicIndexer> = StringSpark::default();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▅█");
     }
 
@@ -167,14 +188,12 @@ mod tests {
         assert_eq!(spark.spark(&[f64::NAN, 1.0, 2.0, f64::NAN, 3.0]), "▁▅█");
     }
 
-    #[ignore]
+    #[cfg(feature = "rangemap")]
     #[test]
     fn test_infinite() {
-        let spark = StringSpark::default();
-        assert_eq!(
-            spark.spark(&[f64::NEG_INFINITY, 0.0, f64::INFINITY,]),
-            "▁▅█"
-        );
+        use crate::indexer::rangemap::BuildRangeMapIndexer;
+        let spark = StringSpark::new_with_indexer(&TICKS, BuildRangeMapIndexer::default());
+        assert_eq!(spark.spark(&[f64::INFINITY, 0.0, f64::INFINITY,]), "▁▅█");
     }
 
     #[test]

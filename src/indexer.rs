@@ -1,5 +1,8 @@
 pub mod algorithmic;
 
+#[cfg(feature = "rangemap")]
+pub mod rangemap;
+
 pub trait Indexer<T, S> {
     fn index(&self, v: T) -> S;
 }
