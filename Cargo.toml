@@ -12,4 +12,4 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 
 [dev-dependencies]
-test-case = "2.2.2"
+test-case = "3.0.0"
