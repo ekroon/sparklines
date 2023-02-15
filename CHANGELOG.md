@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2](https://github.com/ekroon/sparklines/compare/v0.2.1...v0.2.2) (2023-02-15)
+
+
+### Miscellaneous
+
+* update test-case requirement from 2.2.2 to 3.0.0 ([7564480](https://github.com/ekroon/sparklines/commit/756448011fef1b4375bdb499298f5d59b9ba3a72))
+
 ## [0.2.1](https://github.com/ekroon/sparklines/compare/v0.2.0...v0.2.1) (2023-01-05)
 
 
