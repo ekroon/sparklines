@@ -1,7 +1,7 @@
 //! The sparklines crate provides a simple way to generate sparklines.
 
-use crate::indexer::algorithmic::BuildAlgorithmicIndexer;
-use crate::indexer::rangemap::BuildRangemapIndexer;
+pub use crate::indexer::algorithmic::BuildAlgorithmicIndexer;
+pub use crate::indexer::rangemap::BuildRangemapIndexer;
 use crate::indexer::{BuildIndexer, Indexer};
 
 mod indexer;
@@ -18,6 +18,12 @@ pub enum Error {
     /// The provided slice of ticks was empty.
     EmptyTicks,
 }
+
+/// Sparkline backed by [`BuildAlgorithmicIndexer`].
+pub type AlgorithmicSpark<'a> = StringSpark<'a, BuildAlgorithmicIndexer>;
+
+/// Sparkline backed by [`BuildRangemapIndexer`].
+pub type RangemapSpark<'a> = StringSpark<'a, BuildRangemapIndexer>;
 
 /// `StringSparkline` is a struct that can be used to create a string sparkline.
 pub struct StringSpark<'a, I = BuildAlgorithmicIndexer>
@@ -163,7 +169,7 @@ mod tests {
     #[test_case(&[1.0 ] => "▅")]
     #[test_case(&[] => "")]
     fn test_spark(data: &[f64]) -> String {
-        let spark = StringSpark::<BuildAlgorithmicIndexer>::new(&TICKS).unwrap();
+        let spark = AlgorithmicSpark::new(&TICKS).unwrap();
         spark.spark(data)
     }
 
@@ -175,13 +181,13 @@ mod tests {
 
     #[test]
     fn test_rangemap_indexer() {
-        let spark = StringSpark::<BuildRangemapIndexer>::new(&TICKS).unwrap();
+        let spark = RangemapSpark::new(&TICKS).unwrap();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▄█");
     }
 
     #[test]
     fn test_non_default() {
-        let spark = StringSpark::<BuildAlgorithmicIndexer>::new(&['a', 'b', 'c']).unwrap();
+        let spark = AlgorithmicSpark::new(&['a', 'b', 'c']).unwrap();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "abc");
     }
 
@@ -208,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_empty_ticks() {
-        assert!(StringSpark::<BuildAlgorithmicIndexer>::new(&[]).is_err());
-        assert!(StringSpark::<BuildAlgorithmicIndexer>::new_with_min_max(&[], 0.0, 1.0).is_err());
+        assert!(AlgorithmicSpark::new(&[]).is_err());
+        assert!(AlgorithmicSpark::new_with_min_max(&[], 0.0, 1.0).is_err());
     }
 }
