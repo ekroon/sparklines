@@ -1,6 +1,7 @@
 //! The sparklines crate provides a simple way to generate sparklines.
 
 use crate::indexer::algorithmic::BuildAlgorithmicIndexer;
+use crate::indexer::rangemap::BuildRangemapIndexer;
 use crate::indexer::{BuildIndexer, Indexer};
 
 mod indexer;
@@ -152,6 +153,12 @@ mod tests {
     #[test]
     fn test_default() {
         let spark = StringSpark::default();
+        assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▅█");
+    }
+
+    #[test]
+    fn test_rangemap_indexer() {
+        let spark = StringSpark::<BuildRangemapIndexer>::new(&TICKS);
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▅█");
     }
 
