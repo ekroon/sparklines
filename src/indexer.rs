@@ -1,4 +1,5 @@
 pub mod algorithmic;
+pub mod rangemap;
 
 pub trait Indexer<T, S> {
     fn index(&self, v: T) -> S;
