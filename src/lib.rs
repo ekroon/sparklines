@@ -141,9 +141,20 @@ where
     }
 }
 
-impl Default for StringSpark<'_> {
+impl<'a> StringSpark<'a> {
+    /// Construct a `StringSpark` using the built-in ticks and the default
+    /// algorithmic indexer.
+    pub fn default() -> Self {
+        Self::new(&TICKS).expect("default ticks are not empty")
+    }
+}
+
+impl<'a, I> Default for StringSpark<'a, I>
+where
+    I: BuildIndexer<f64, usize> + Default,
+{
     fn default() -> Self {
-        StringSpark::new(&TICKS).expect("default ticks are not empty")
+        Self::new(&TICKS).expect("default ticks are not empty")
     }
 }
 
@@ -175,14 +186,20 @@ mod tests {
 
     #[test]
     fn test_default() {
-        let spark = StringSpark::default();
+        let spark = AlgorithmicSpark::default();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▅█");
     }
 
     #[test]
     fn test_rangemap_indexer() {
-        let spark = RangemapSpark::new(&TICKS).unwrap();
+        let spark = RangemapSpark::default();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▄█");
+    }
+
+    #[test]
+    fn test_stringspark() {
+        let spark = StringSpark::default();
+        assert_eq!(spark.spark(&[f64::NAN, 1.0, 2.0, f64::NAN, 3.0]), "▁▅█");
     }
 
     #[test]
@@ -193,14 +210,14 @@ mod tests {
 
     #[test]
     fn test_nan() {
-        let spark = StringSpark::default();
+        let spark = AlgorithmicSpark::default();
         assert_eq!(spark.spark(&[f64::NAN, 1.0, 2.0, f64::NAN, 3.0]), "▁▅█");
     }
 
     #[ignore]
     #[test]
     fn test_infinite() {
-        let spark = StringSpark::default();
+        let spark = AlgorithmicSpark::default();
         assert_eq!(
             spark.spark(&[f64::NEG_INFINITY, 0.0, f64::INFINITY,]),
             "▁▅█"
