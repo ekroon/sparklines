@@ -1,6 +1,7 @@
 //! The sparklines crate provides a simple way to generate sparklines.
 
-use crate::indexer::algorithmic::BuildAlgorithmicIndexer;
+pub use crate::indexer::algorithmic::BuildAlgorithmicIndexer;
+pub use crate::indexer::rangemap::BuildRangemapIndexer;
 use crate::indexer::{BuildIndexer, Indexer};
 
 mod indexer;
@@ -10,6 +11,19 @@ mod indexer;
 /// assert_eq!(sparklines::TICKS, ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']);
 /// ```
 pub const TICKS: [char; 8] = ['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█'];
+
+/// Errors that can occur when constructing a [`StringSpark`].
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Error {
+    /// The provided slice of ticks was empty.
+    EmptyTicks,
+}
+
+/// Sparkline backed by [`BuildAlgorithmicIndexer`].
+pub type AlgorithmicSpark<'a> = StringSpark<'a, BuildAlgorithmicIndexer>;
+
+/// Sparkline backed by [`BuildRangemapIndexer`].
+pub type RangemapSpark<'a> = StringSpark<'a, BuildRangemapIndexer>;
 
 /// `StringSparkline` is a struct that can be used to create a string sparkline.
 pub struct StringSpark<'a, I = BuildAlgorithmicIndexer>
@@ -23,27 +37,33 @@ where
     build_indexer: I,
 }
 
-impl<'a> StringSpark<'a> {
+impl<'a, I> StringSpark<'a, I>
+where
+    I: BuildIndexer<f64, usize> + Default,
+{
     /// Create a new `SparkLines` instance.
     ///
     /// # Examples
     /// ```
     /// # use sparklines::TICKS;
     ///
-    /// let spark = sparklines::StringSpark::new(&TICKS);
+    /// let spark: sparklines::StringSpark = sparklines::StringSpark::new(&TICKS).unwrap();
     /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "▁▅█");
     ///
-    /// let spark = sparklines::StringSpark::new(&['a','b','c']);
+    /// let spark: sparklines::StringSpark = sparklines::StringSpark::new(&['a','b','c']).unwrap();
     /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "abc");
     /// ```
-    pub fn new(ticks: &'a [char]) -> Self {
-        Self {
+    pub fn new(ticks: &'a [char]) -> Result<Self, Error> {
+        if ticks.is_empty() {
+            return Err(Error::EmptyTicks);
+        }
+        Ok(Self {
             min: None,
             max: None,
             ticks,
             middle_idx: ticks.len() / 2,
             build_indexer: Default::default(),
-        }
+        })
     }
 
     /// Create a new `SparkLines` instance.
@@ -52,27 +72,31 @@ impl<'a> StringSpark<'a> {
     /// ```
     /// # use sparklines::TICKS;
     ///
-    /// let spark = sparklines::StringSpark::new_with_min_max(&TICKS, 2.0, 3.0);
+    /// let spark: sparklines::StringSpark = sparklines::StringSpark::new_with_min_max(&TICKS, 2.0, 3.0).unwrap();
     /// assert_eq!(spark.spark(&[1.0,2.0,3.0,4.0]), "▁▁██");
     ///
-    /// let spark = sparklines::StringSpark::new_with_min_max(&TICKS, 1.0, 3.0);
+    /// let spark: sparklines::StringSpark = sparklines::StringSpark::new_with_min_max(&TICKS, 1.0, 3.0).unwrap();
     /// assert_eq!(spark.spark(&[0.0,2.0,300.0]), "▁▅█");
     /// ```
-    pub fn new_with_min_max(ticks: &'a [char], min: f64, max: f64) -> Self {
-        Self {
+    pub fn new_with_min_max(ticks: &'a [char], min: f64, max: f64) -> Result<Self, Error> {
+        if ticks.is_empty() {
+            return Err(Error::EmptyTicks);
+        }
+        Ok(Self {
             min: Some(min),
             max: Some(max),
             ticks,
             middle_idx: ticks.len() / 2,
             build_indexer: Default::default(),
-        }
+        })
     }
 
     /// Convert a slice of `f64` values into a String representing a sparkline.
     ///
     /// # Example
     /// ```
-    /// assert_eq!(sparklines::StringSpark::new(&sparklines::TICKS).spark(&[1.0,2.0,3.0]), "▁▅█");
+    /// let spark: sparklines::StringSpark = sparklines::StringSpark::new(&sparklines::TICKS).unwrap();
+    /// assert_eq!(spark.spark(&[1.0,2.0,3.0]), "▁▅█");
     /// ```
     pub fn spark(&self, data: &[f64]) -> String {
         let mut result = String::with_capacity(data.len() * 4);
@@ -117,9 +141,20 @@ impl<'a> StringSpark<'a> {
     }
 }
 
-impl Default for StringSpark<'_> {
+impl<'a> StringSpark<'a> {
+    /// Construct a `StringSpark` using the built-in ticks and the default
+    /// algorithmic indexer.
+    pub fn default() -> Self {
+        Self::new(&TICKS).expect("default ticks are not empty")
+    }
+}
+
+impl<'a, I> Default for StringSpark<'a, I>
+where
+    I: BuildIndexer<f64, usize> + Default,
+{
     fn default() -> Self {
-        StringSpark::new(&TICKS)
+        Self::new(&TICKS).expect("default ticks are not empty")
     }
 }
 
@@ -145,32 +180,44 @@ mod tests {
     #[test_case(&[1.0 ] => "▅")]
     #[test_case(&[] => "")]
     fn test_spark(data: &[f64]) -> String {
-        let spark = StringSpark::new(&TICKS);
+        let spark = AlgorithmicSpark::new(&TICKS).unwrap();
         spark.spark(data)
     }
 
     #[test]
     fn test_default() {
-        let spark = StringSpark::default();
+        let spark = AlgorithmicSpark::default();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▅█");
     }
 
     #[test]
+    fn test_rangemap_indexer() {
+        let spark = RangemapSpark::default();
+        assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "▁▄█");
+    }
+
+    #[test]
+    fn test_stringspark() {
+        let spark = StringSpark::default();
+        assert_eq!(spark.spark(&[f64::NAN, 1.0, 2.0, f64::NAN, 3.0]), "▁▅█");
+    }
+
+    #[test]
     fn test_non_default() {
-        let spark = StringSpark::new(&['a', 'b', 'c']);
+        let spark = AlgorithmicSpark::new(&['a', 'b', 'c']).unwrap();
         assert_eq!(spark.spark(&[1.0, 2.0, 3.0]), "abc");
     }
 
     #[test]
     fn test_nan() {
-        let spark = StringSpark::default();
+        let spark = AlgorithmicSpark::default();
         assert_eq!(spark.spark(&[f64::NAN, 1.0, 2.0, f64::NAN, 3.0]), "▁▅█");
     }
 
     #[ignore]
     #[test]
     fn test_infinite() {
-        let spark = StringSpark::default();
+        let spark = AlgorithmicSpark::default();
         assert_eq!(
             spark.spark(&[f64::NEG_INFINITY, 0.0, f64::INFINITY,]),
             "▁▅█"
@@ -180,5 +227,11 @@ mod tests {
     #[test]
     fn test_spark_fn() {
         assert_eq!(spark(&[1.0, 2.0, 3.0]), "▁▅█");
+    }
+
+    #[test]
+    fn test_empty_ticks() {
+        assert!(AlgorithmicSpark::new(&[]).is_err());
+        assert!(AlgorithmicSpark::new_with_min_max(&[], 0.0, 1.0).is_err());
     }
 }
